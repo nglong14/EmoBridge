@@ -1,3 +1,9 @@
+import { BrowserRouter, Link, Navigate, Route, Routes } from "react-router-dom";
+
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+
 const featureCards = [
   {
     title: "Emotion-aware prompts",
@@ -16,26 +22,49 @@ const featureCards = [
   },
 ];
 
-function App() {
+function Nav() {
+  const { user, logout, isLoading } = useAuth();
+
+  return (
+    <nav className="top-nav" aria-label="Main navigation">
+      <Link className="brand" to="/" aria-label="EmoBridge home">
+        <span className="brand-mark">
+          <img src="/logo.png" alt="EmoBridge logo" />
+        </span>
+        <span>EmoBridge</span>
+      </Link>
+
+      <div className="nav-actions">
+        {isLoading ? null : user ? (
+          <>
+            <span className="nav-username">{user.name ?? user.email}</span>
+            <button
+              className="button ghost-button"
+              type="button"
+              onClick={() => void logout()}
+            >
+              Sign out
+            </button>
+          </>
+        ) : (
+          <>
+            <Link className="button ghost-button" to="/signin">
+              Sign in
+            </Link>
+            <Link className="button primary-button" to="/signup">
+              Sign up
+            </Link>
+          </>
+        )}
+      </div>
+    </nav>
+  );
+}
+
+function LandingPage() {
   return (
     <main className="landing-page">
-      <nav className="top-nav" aria-label="Main navigation">
-        <a className="brand" href="/" aria-label="EmoBridge home">
-          <span className="brand-mark">
-            <img src="/logo.png" alt="EmoBridge logo" />
-          </span>
-          <span>EmoBridge</span>
-        </a>
-
-        <div className="nav-actions">
-          <a className="button ghost-button" href="/signin">
-            Sign in
-          </a>
-          <a className="button primary-button" href="/signup">
-            Sign up
-          </a>
-        </div>
-      </nav>
+      <Nav />
 
       <section className="hero-band">
         <div className="decor-dot dot-pink" />
@@ -48,14 +77,14 @@ function App() {
           <p className="eyebrow">Feelings, translated with care</p>
           <h1>EmoBridge</h1>
           <p className="hero-description">
-            EmoBridge helps people communicate emotions with clarity, empathy,
-            and practical next steps so hard conversations feel easier to begin.
+            EmoBridge helps people communicate emotions with clarity, empathy, and practical next
+            steps so hard conversations feel easier to begin.
           </p>
 
           <div className="hero-actions">
-            <a className="button primary-button" href="/signup">
+            <Link className="button primary-button" to="/signup">
               Sign up
-            </a>
+            </Link>
             <a className="button secondary-on-dark" href="#learn-more">
               Learn more
             </a>
@@ -114,4 +143,38 @@ function App() {
   );
 }
 
-export default App;
+function AuthRouteGuard({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return null;
+  if (user) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route
+            path="/signin"
+            element={
+              <AuthRouteGuard>
+                <LoginPage />
+              </AuthRouteGuard>
+            }
+          />
+          <Route
+            path="/signup"
+            element={
+              <AuthRouteGuard>
+                <RegisterPage />
+              </AuthRouteGuard>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}

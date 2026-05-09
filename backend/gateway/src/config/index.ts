@@ -37,6 +37,7 @@ const envSchema = z
       .string()
       .url()
       .default("http://localhost:3000/auth/google/callback"),
+    JWT_EXPIRES_IN: z.string().default("15m"),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== "production") {

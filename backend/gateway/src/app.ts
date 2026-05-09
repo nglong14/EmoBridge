@@ -5,6 +5,7 @@ import helmet from "helmet";
 import { env } from "./config/index.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
 import { requestLogger } from "./middleware/requestLogger.js";
+import { authRouter } from "./routes/auth.js";
 import { healthRouter } from "./routes/health.js";
 
 export function createApp() {
@@ -21,6 +22,7 @@ export function createApp() {
   app.use(express.json());
 
   app.use("/health", healthRouter);
+  app.use("/auth", authRouter);
   app.use(notFoundHandler);
   app.use(errorHandler);
 

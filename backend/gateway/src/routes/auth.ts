@@ -84,7 +84,15 @@ authRouter.post("/logout", (_req, res) => {
   res.status(204).end();
 });
 
-// Protected stub used to verify the token flow end-to-end.
-authRouter.get("/me", requireAuth, (req, res) => {
-  res.json({ user: req.user });
+authRouter.get("/me", requireAuth, async (req, res, next) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user!.id },
+      select: { id: true, email: true, name: true, createdAt: true },
+    });
+    if (!user) return next(new AppError("User not found", 404));
+    return res.json({ user });
+  } catch (err) {
+    return next(err);
+  }
 });

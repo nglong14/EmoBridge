@@ -27,11 +27,6 @@ authRouter.post("/register", validate({ body: registerSchema }), async (req, res
     const existing = await prisma.user.findUnique({ where: { email } });
 
     if (existing !== null) {
-      // If the existing account has no passwordHash it was created via OAuth;
-      // direct the user to sign in with Google instead of creating a duplicate.
-      if (!existing.passwordHash) {
-        return next(new AppError("An account with this email already exists. Sign in with Google.", 409));
-      }
       return next(new AppError("Email already registered", 409));
     }
 
@@ -54,12 +49,7 @@ authRouter.post("/login", validate({ body: loginSchema }), async (req, res, next
 
     const user = await prisma.user.findUnique({ where: { email } });
 
-    if (user === null || !user.passwordHash) {
-      // Return 401 for both "not found" and "OAuth-only account" to avoid
-      // leaking which emails exist via timing or message differences.
-      if (user !== null && !user.passwordHash) {
-        return next(new AppError("This account uses Google sign-in. Use /auth/google instead.", 401));
-      }
+    if (user === null) {
       return next(new AppError("Invalid email or password", 401));
     }
 

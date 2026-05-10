@@ -1,7 +1,9 @@
 import { BrowserRouter, Link, Navigate, Route, Routes } from "react-router-dom";
 
+import Nav from "./components/Nav";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import LoginPage from "./pages/LoginPage";
+import ContactsPage from "./pages/ContactsPage";
 import RegisterPage from "./pages/RegisterPage";
 
 const featureCards = [
@@ -21,45 +23,6 @@ const featureCards = [
     className: "feature-card lavender",
   },
 ];
-
-function Nav() {
-  const { user, logout, isLoading } = useAuth();
-
-  return (
-    <nav className="top-nav" aria-label="Main navigation">
-      <Link className="brand" to="/" aria-label="EmoBridge home">
-        <span className="brand-mark">
-          <img src="/logo.png" alt="EmoBridge logo" />
-        </span>
-        <span>EmoBridge</span>
-      </Link>
-
-      <div className="nav-actions">
-        {isLoading ? null : user ? (
-          <>
-            <span className="nav-username">{user.name ?? user.email}</span>
-            <button
-              className="button ghost-button"
-              type="button"
-              onClick={() => void logout()}
-            >
-              Sign out
-            </button>
-          </>
-        ) : (
-          <>
-            <Link className="button ghost-button" to="/signin">
-              Sign in
-            </Link>
-            <Link className="button primary-button" to="/signup">
-              Sign up
-            </Link>
-          </>
-        )}
-      </div>
-    </nav>
-  );
-}
 
 function LandingPage() {
   const { user, isLoading } = useAuth();
@@ -154,6 +117,13 @@ function AuthRouteGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return null;
+  if (!user) return <Navigate to="/signin" replace />;
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -174,6 +144,14 @@ export default function App() {
               <AuthRouteGuard>
                 <RegisterPage />
               </AuthRouteGuard>
+            }
+          />
+          <Route
+            path="/contacts"
+            element={
+              <RequireAuth>
+                <ContactsPage />
+              </RequireAuth>
             }
           />
           <Route path="*" element={<Navigate to="/" replace />} />

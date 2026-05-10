@@ -62,6 +62,8 @@ function Nav() {
 }
 
 function LandingPage() {
+  const { user, isLoading } = useAuth();
+
   return (
     <main className="landing-page">
       <Nav />
@@ -82,9 +84,11 @@ function LandingPage() {
           </p>
 
           <div className="hero-actions">
-            <Link className="button primary-button" to="/signup">
-              Sign up
-            </Link>
+            {!isLoading && !user && (
+              <Link className="button primary-button" to="/signup">
+                Sign up
+              </Link>
+            )}
             <a className="button secondary-on-dark" href="#learn-more">
               Learn more
             </a>

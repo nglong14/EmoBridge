@@ -4,7 +4,6 @@ import { z } from "zod";
 
 const developmentDefaults = {
   JWT_SECRET: "change-me-in-development-only-32-chars",
-  OAUTH_COOKIE_SECRET: "change-me-in-development-only-32-char",
 };
 
 const envSchema = z
@@ -24,19 +23,6 @@ const envSchema = z
     AI_SERVICE_URL: z.string().url().default("http://localhost:8000"),
     CORS_ORIGIN: z.string().min(1).default("http://localhost:5173"),
     FRONTEND_URL: z.string().url().default("http://localhost:5173"),
-    OAUTH_COOKIE_SECRET: z
-      .string()
-      .min(32, "OAUTH_COOKIE_SECRET must be at least 32 characters")
-      .default(developmentDefaults.OAUTH_COOKIE_SECRET),
-    GOOGLE_CLIENT_ID: z.string().min(1).default("replace-with-google-client-id"),
-    GOOGLE_CLIENT_SECRET: z
-      .string()
-      .min(1)
-      .default("replace-with-google-client-secret"),
-    GOOGLE_REDIRECT_URI: z
-      .string()
-      .url()
-      .default("http://localhost:3000/auth/google/callback"),
     JWT_EXPIRES_IN: z.string().default("15m"),
   })
   .superRefine((env, ctx) => {

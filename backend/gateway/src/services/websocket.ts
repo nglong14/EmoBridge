@@ -117,14 +117,14 @@ export function attachWebsocket(server: HttpServer): Server {
     const authed = ws as AuthedSocket;
     const { userId, userEmail } = authed;
 
-    let turnController = new AbortController();
+    let turnController: AbortController | null = null;
 
     authed.on("pong", () => {
       authed.isAlive = true;
     });
 
     authed.on("close", () => {
-      turnController.abort();
+      turnController?.abort();
     });
 
     authed.on("message", async (raw) => {
@@ -137,7 +137,7 @@ export function attachWebsocket(server: HttpServer): Server {
         return;
       }
 
-      if (!turnController.signal.aborted) {
+      if (turnController !== null) {
         send(authed, { type: "error", message: "Previous turn still streaming" });
         return;
       }
@@ -147,76 +147,80 @@ export function attachWebsocket(server: HttpServer): Server {
       const content = parsed.content;
 
       try {
-        await prisma.message.create({
-          data: { userId, role: "USER", content },
-        });
-      } catch (err) {
-        logger.error({ err, userId }, "Failed to persist user message");
-        send(authed, { type: "error", message: "Failed to save message" });
-        return;
-      }
-
-      let history: ChatMessage[];
-
-      try {
-        const rows = await prisma.message.findMany({
-          where: { userId },
-          orderBy: { createdAt: "asc" },
-          take: HISTORY_LIMIT,
-          select: { role: true, content: true },
-        });
-
-        history = rows.map((row) => ({
-          role: row.role.toLowerCase() as ChatMessage["role"],
-          content: row.content,
-        }));
-
-        if (history.length === 0 || history[0]?.role !== "system") {
-          history = [{ role: "system", content: SYSTEM_PROMPT }, ...history];
+        try {
+          await prisma.message.create({
+            data: { userId, role: "USER", content },
+          });
+        } catch (err) {
+          logger.error({ err, userId }, "Failed to persist user message");
+          send(authed, { type: "error", message: "Failed to save message" });
+          return;
         }
-      } catch (err) {
-        logger.error({ err, userId }, "Failed to load message history");
-        send(authed, { type: "error", message: "Failed to load history" });
-        return;
-      }
 
-      let full = "";
+        let history: ChatMessage[];
 
-      try {
-        for await (const delta of chatStream(history, { signal })) {
-          full += delta;
-          send(authed, { type: "token", delta });
+        try {
+          const rows = await prisma.message.findMany({
+            where: { userId },
+            orderBy: { createdAt: "asc" },
+            take: HISTORY_LIMIT,
+            select: { role: true, content: true },
+          });
+
+          history = rows.map((row) => ({
+            role: row.role.toLowerCase() as ChatMessage["role"],
+            content: row.content,
+          }));
+
+          if (history.length === 0 || history[0]?.role !== "system") {
+            history = [{ role: "system", content: SYSTEM_PROMPT }, ...history];
+          }
+        } catch (err) {
+          logger.error({ err, userId }, "Failed to load message history");
+          send(authed, { type: "error", message: "Failed to load history" });
+          return;
         }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "AI service error";
-        logger.error({ err, userId }, "AI stream error");
-        send(authed, { type: "error", message });
+
+        let full = "";
+
+        try {
+          for await (const delta of chatStream(history, { signal })) {
+            full += delta;
+            send(authed, { type: "token", delta });
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "AI service error";
+          logger.error({ err, userId }, "AI stream error");
+          send(authed, { type: "error", message });
+
+          if (full.length > 0) {
+            try {
+              await prisma.message.create({
+                data: { userId, role: "ASSISTANT", content: full },
+              });
+            } catch (persistErr) {
+              logger.error({ err: persistErr, userId }, "Failed to persist partial assistant message");
+            }
+          }
+          return;
+        }
 
         if (full.length > 0) {
           try {
             await prisma.message.create({
               data: { userId, role: "ASSISTANT", content: full },
             });
-          } catch (persistErr) {
-            logger.error({ err: persistErr, userId }, "Failed to persist partial assistant message");
+          } catch (err) {
+            logger.error({ err, userId }, "Failed to persist assistant message");
+            send(authed, { type: "error", message: "Failed to save response" });
+            return;
           }
         }
-        return;
-      }
 
-      if (full.length > 0) {
-        try {
-          await prisma.message.create({
-            data: { userId, role: "ASSISTANT", content: full },
-          });
-        } catch (err) {
-          logger.error({ err, userId }, "Failed to persist assistant message");
-          send(authed, { type: "error", message: "Failed to save response" });
-          return;
-        }
+        send(authed, { type: "done" });
+      } finally {
+        turnController = null;
       }
-
-      send(authed, { type: "done" });
     });
 
     logger.info({ userId, userEmail }, "WebSocket connected");

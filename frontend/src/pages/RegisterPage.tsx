@@ -12,17 +12,28 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldIssues, setFieldIssues] = useState<{ path: string; message: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  function getIssue(field: string): string | undefined {
+    return fieldIssues.find((i) => i.path === field)?.message;
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setFieldIssues([]);
     setSubmitting(true);
     try {
       await register(email, password, name.trim() || undefined);
-      navigate("/");
+      navigate("/chat");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
+      if (err instanceof ApiError) {
+        setError(err.message);
+        setFieldIssues(err.issues ?? []);
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -56,7 +67,14 @@ export default function RegisterPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Your name"
+            aria-invalid={getIssue("name") ? true : undefined}
+            aria-describedby={getIssue("name") ? "name-hint" : undefined}
           />
+          {getIssue("name") && (
+            <p id="name-hint" className="field-hint" role="alert">
+              {getIssue("name")}
+            </p>
+          )}
 
           <label className="field-label" htmlFor="email">
             Email
@@ -70,7 +88,14 @@ export default function RegisterPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
+            aria-invalid={getIssue("email") ? true : undefined}
+            aria-describedby={getIssue("email") ? "email-hint" : undefined}
           />
+          {getIssue("email") && (
+            <p id="email-hint" className="field-hint" role="alert">
+              {getIssue("email")}
+            </p>
+          )}
 
           <label className="field-label" htmlFor="password">
             Password
@@ -85,9 +110,21 @@ export default function RegisterPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="At least 8 characters"
+            aria-invalid={getIssue("password") ? true : undefined}
+            aria-describedby={getIssue("password") ? "password-hint" : undefined}
           />
+          {getIssue("password") && (
+            <p id="password-hint" className="field-hint" role="alert">
+              {getIssue("password")}
+            </p>
+          )}
 
-          <button className="button primary-button auth-submit" type="submit" disabled={submitting}>
+          <button
+            className="button primary-button auth-submit"
+            type="submit"
+            disabled={submitting}
+            aria-busy={submitting || undefined}
+          >
             {submitting ? "Creating account…" : "Create account"}
           </button>
         </form>

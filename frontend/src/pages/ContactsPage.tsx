@@ -54,6 +54,7 @@ export default function ContactsPage() {
   }
 
   async function handleDelete(id: string) {
+    if (!window.confirm("Remove this contact from your trust list?")) return;
     setDeletingId(id);
     try {
       await api.deleteContact(id);
@@ -84,7 +85,18 @@ export default function ContactsPage() {
           <ContactForm key={editing?.id ?? "new"} initial={editing ?? undefined} onSave={handleSave} onCancel={closeForm} />
         )}
 
-        {loading && <p className="contacts-empty">Loading…</p>}
+        {loading && (
+          <div className="contacts-list" aria-busy="true">
+            {[1, 2, 3].map((i) => (
+              <div className="contact-card contact-skeleton" key={i} aria-hidden="true">
+                <div className="contact-card-body">
+                  <div className="skeleton-line skeleton-line--name" />
+                  <div className="skeleton-line skeleton-line--meta" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         {loadError && (
           <p className="form-error" role="alert">
             {loadError}

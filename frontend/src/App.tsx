@@ -3,6 +3,7 @@ import { BrowserRouter, Link, Navigate, Route, Routes } from "react-router-dom";
 import Nav from "./components/Nav";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import LoginPage from "./pages/LoginPage";
+import ChatPage from "./pages/ChatPage";
 import ContactsPage from "./pages/ContactsPage";
 import RegisterPage from "./pages/RegisterPage";
 
@@ -47,10 +48,16 @@ function LandingPage() {
           </p>
 
           <div className="hero-actions">
-            {!isLoading && !user && (
-              <Link className="button primary-button" to="/signup">
-                Sign up
+            {!isLoading && user ? (
+              <Link className="button primary-button" to="/chat">
+                Open chat
               </Link>
+            ) : (
+              !isLoading && (
+                <Link className="button primary-button" to="/signup">
+                  Sign up
+                </Link>
+              )
             )}
             <a className="button secondary-on-dark" href="#learn-more">
               Learn more
@@ -144,6 +151,14 @@ export default function App() {
               <AuthRouteGuard>
                 <RegisterPage />
               </AuthRouteGuard>
+            }
+          />
+          <Route
+            path="/chat"
+            element={
+              <RequireAuth>
+                <ChatPage />
+              </RequireAuth>
             }
           />
           <Route

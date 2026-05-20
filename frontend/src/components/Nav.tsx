@@ -17,6 +17,9 @@ export default function Nav() {
       <div className="nav-actions">
         {isLoading ? null : user ? (
           <>
+            <Link className="button ghost-button" to="/chat">
+              Chat
+            </Link>
             <Link className="button ghost-button" to="/contacts">
               Contacts
             </Link>

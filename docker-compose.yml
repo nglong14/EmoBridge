@@ -1,4 +1,24 @@
 services:
+  # ── Database ──
+  postgres:
+    image: postgres:16-alpine
+    container_name: emobridge-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: emobridge
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d emobridge"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # ── AI Infrastructure ──
   ollama:
     image: ollama/ollama:latest
     container_name: emobridge-ollama
@@ -25,5 +45,41 @@ services:
       - ollama
     restart: unless-stopped
 
+  # ── Backend Gateway ──
+  gateway:
+    build:
+      context: ./backend/gateway
+      dockerfile: Dockerfile
+    container_name: emobridge-gateway
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/emobridge
+      AI_SERVICE_URL: http://ai-service:8000
+      CORS_ORIGIN: http://localhost:5173
+      FRONTEND_URL: http://localhost:5173
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+    restart: unless-stopped
+
+  # ── Frontend ──
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: emobridge-frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - gateway
+    restart: unless-stopped
+
 volumes:
+  postgres_data:
   ollama_data:

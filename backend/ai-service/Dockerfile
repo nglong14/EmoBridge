@@ -1,5 +1,6 @@
 FROM python:3.13-slim
 
+# Real-time visibility
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 

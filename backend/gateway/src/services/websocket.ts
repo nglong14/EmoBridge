@@ -49,6 +49,7 @@ function send(socket: WebSocket, payload: WsOutgoing): void {
   }
 }
 
+// Authenticate user with JWT token
 function parseJwt(token: string): JwtPayload {
   const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: ["HS256"] });
 
@@ -65,6 +66,7 @@ function parseJwt(token: string): JwtPayload {
 }
 
 export function attachWebsocket(server: HttpServer): Server {
+  // New websocket server, use existing HttpServer
   const wss = new WebSocketServer({ noServer: true });
 
   let heartbeatInterval: ReturnType<typeof setInterval> | undefined;
@@ -76,6 +78,7 @@ export function attachWebsocket(server: HttpServer): Server {
     }
   });
 
+  // Upgrade HTTP connection to WebSocket connection, check token in URL
   server.on("upgrade", (request: IncomingMessage, socket: Duplex, head: Buffer) => {
     const url = request.url;
 
@@ -119,14 +122,17 @@ export function attachWebsocket(server: HttpServer): Server {
 
     let turnController: AbortController | null = null;
 
+    // Check connection status
     authed.on("pong", () => {
       authed.isAlive = true;
     });
 
+    // If connection is closed, abort the turn controller
     authed.on("close", () => {
       turnController?.abort();
     });
 
+    // Handle incoming messages
     authed.on("message", async (raw) => {
       let parsed: WsIncoming;
 
@@ -147,6 +153,7 @@ export function attachWebsocket(server: HttpServer): Server {
       const content = parsed.content;
 
       try {
+        // Insert user message into Message db
         try {
           await prisma.message.create({
             data: { userId, role: "USER", content },
@@ -157,6 +164,7 @@ export function attachWebsocket(server: HttpServer): Server {
           return;
         }
 
+        // Conversation history - 20 most recent messages
         let history: ChatMessage[];
 
         try {
@@ -181,6 +189,7 @@ export function attachWebsocket(server: HttpServer): Server {
           return;
         }
 
+        // Real-Time Streaming Response
         let full = "";
 
         try {
@@ -193,6 +202,7 @@ export function attachWebsocket(server: HttpServer): Server {
           logger.error({ err, userId }, "AI stream error");
           send(authed, { type: "error", message });
 
+          // If error occurs during streaming, save the partial response to Postgres
           if (full.length > 0) {
             try {
               await prisma.message.create({
@@ -205,6 +215,7 @@ export function attachWebsocket(server: HttpServer): Server {
           return;
         }
 
+        // If successful, save to Postgres
         if (full.length > 0) {
           try {
             await prisma.message.create({

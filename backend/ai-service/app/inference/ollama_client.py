@@ -9,19 +9,23 @@ from app.schemas import ChatMessage
 
 
 class OllamaChatClient:
+    # Initialize the Ollama client with HTTP connection and settings
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
         self._client = httpx.AsyncClient(base_url=settings.ollama_host, timeout=None)
         self._is_loaded = False
 
+    # Successful load check
     @property
     def is_loaded(self) -> bool:
         return self._is_loaded
 
+    # Device type identifier
     @property
     def device(self) -> str:
         return "ollama"
 
+    # Fail fast if the configured model is not available in Ollama
     async def load(self) -> None:
         response = await self._client.get("/api/tags")
         response.raise_for_status()
@@ -38,9 +42,11 @@ class OllamaChatClient:
 
         self._is_loaded = True
 
+    # Close the HTTP Client connection gracefully
     async def aclose(self) -> None:
         await self._client.aclose()
 
+    # Stream chat completions from Ollama with the given messages and parameters
     async def stream(
         self,
         messages: list[ChatMessage],
@@ -67,9 +73,10 @@ class OllamaChatClient:
             },
         }
 
+        # Streaming connection to Ollama
         async with self._client.stream("POST", "/api/chat", json=payload) as response:
             response.raise_for_status()
-
+            
             async for line in response.aiter_lines():
                 if not line:
                     continue

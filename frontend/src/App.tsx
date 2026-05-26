@@ -2,6 +2,7 @@ import { BrowserRouter, Link, Navigate, Route, Routes } from "react-router-dom";
 
 import Nav from "./components/Nav";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import LoginPage from "./pages/LoginPage";
 import ChatPage from "./pages/ChatPage";
 import ContactsPage from "./pages/ContactsPage";
@@ -134,6 +135,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <BrowserRouter>
+      <ThemeProvider>
       <AuthProvider>
         <Routes>
           <Route path="/" element={<LandingPage />} />
@@ -172,6 +174,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

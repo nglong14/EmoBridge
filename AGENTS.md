@@ -29,16 +29,28 @@ uv run uvicorn main:app --reload          # dev server
 uv sync                                   # install deps
 
 # Infrastructure (from root)
-docker compose up    # starts ollama + ai-service only (NOT gateway or frontend)
+docker compose up    # starts ALL services: postgres, ollama, ai-service, gateway, frontend
+docker compose up -d # detached mode
+docker compose up --build # rebuild images after code changes
 ```
 
 ## Setup Order
 
+### Docker (recommended)
+1. Copy `.env.example` → `.env` in `backend/gateway/` and `backend/ai-service/`
+2. (Optional) Set `JWT_SECRET` in root `.env` or export it — defaults to a dev placeholder
+3. Run `docker compose up --build`
+4. Run Prisma migrations against the containerized DB:
+   ```bash
+   cd backend/gateway && DATABASE_URL=postgresql://postgres:postgres@localhost:5432/emobridge npx prisma migrate deploy
+   ```
+
+### Local dev (without Docker)
 1. Install deps in all three packages (`npm install` in frontend & backend/gateway; `uv sync` in backend/ai-service)
 2. Copy `.env.example` → `.env` in `backend/gateway/` and `backend/ai-service/`
-3. Start PostgreSQL (not managed by docker compose)
+3. Start PostgreSQL manually
 4. Run `npx prisma migrate dev` in `backend/gateway/` to create DB tables
-5. Start Ollama + AI service: `docker compose up`
+5. Start Ollama + AI service: `docker compose up ollama ai-service`
 6. Start gateway: `npm run dev` in `backend/gateway/`
 7. Start frontend: `npm run dev` in `frontend/`
 

@@ -1256,6 +1256,92 @@ h1 {
   text-align: center;
 }
 
+.chat-conversation-item {
+  display: flex;
+  align-items: center;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.chat-conversation-item:hover {
+  background: var(--hairline);
+}
+
+.chat-conversation-item--active {
+  background: var(--hairline-strong);
+}
+
+.chat-conversation-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.chat-conversation-title {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-conversation-delete {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  color: var(--steel);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.chat-conversation-item:hover .chat-conversation-delete {
+  opacity: 0.6;
+}
+
+.chat-conversation-delete:hover {
+  opacity: 1 !important;
+  color: var(--danger, #e53e3e);
+}
+
+.chat-conversation-rename {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  color: var(--steel);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.chat-conversation-item:hover .chat-conversation-rename {
+  opacity: 0.6;
+}
+
+.chat-conversation-rename:hover {
+  opacity: 1 !important;
+  color: var(--primary);
+}
+
+.chat-conversation-rename-input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  padding: 7px 9px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+
 .chat-sidebar-bottom {
   display: flex;
   align-items: center;
@@ -1580,6 +1666,13 @@ h1 {
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
+}
+
+.chat-thread-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: inherit;
 }
 
 .chat-thread-avatar--user {

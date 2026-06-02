@@ -39,7 +39,7 @@ export default function MessageBubble({ message, isStreaming }: Props) {
       <div className="chat-thread-message-inner">
         {!isUser && (
           <div className="chat-thread-avatar" aria-hidden="true">
-            E
+            <img src="/logo.png" alt="EmoBridge" />
           </div>
         )}
 

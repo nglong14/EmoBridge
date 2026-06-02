@@ -7,8 +7,8 @@ import { errorHandler, notFoundHandler } from "./middleware/error.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 import { authRouter } from "./routes/auth.js";
 import { contactsRouter } from "./routes/contacts.js";
+import { conversationsRouter } from "./routes/conversations.js";
 import { healthRouter } from "./routes/health.js";
-import { messagesRouter } from "./routes/messages.js";
 
 export function createApp() {
   const app = express();
@@ -26,7 +26,7 @@ export function createApp() {
   app.use("/health", healthRouter);
   app.use("/auth", authRouter);
   app.use("/api/contacts", contactsRouter);
-  app.use("/api/messages", messagesRouter);
+  app.use("/api/conversations", conversationsRouter);
   app.use(notFoundHandler);
   app.use(errorHandler);
 

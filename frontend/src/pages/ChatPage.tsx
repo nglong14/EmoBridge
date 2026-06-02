@@ -14,10 +14,15 @@ export default function ChatPage() {
     status,
     errorMsg,
     streamingIndex,
+    currentConversationId,
+    refreshSignal,
     connect,
     disconnect,
     send,
     setMessages,
+    switchConversation,
+    startNewChat,
+    setRefreshSignal,
   } = useChat();
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -28,20 +33,23 @@ export default function ChatPage() {
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
+  // On initial load: fetch conversations, auto-select the most recent one
   useEffect(() => {
     if (loadedRef.current) return;
     loadedRef.current = true;
 
     api
-      .listMessages()
-      .then(({ messages: history }) => {
-        setMessages(history);
+      .listConversations()
+      .then(({ conversations }) => {
+        if (conversations.length > 0 && conversations[0]) {
+          switchConversation(conversations[0].id);
+        }
         connect();
       })
       .catch(() => {
         connect();
       });
-  }, [connect, setMessages]);
+  }, [connect, switchConversation]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -60,8 +68,40 @@ export default function ChatPage() {
   }, []);
 
   const handleNewChat = useCallback(() => {
-    setMessages([]);
-  }, [setMessages]);
+    startNewChat();
+  }, [startNewChat]);
+
+  const handleSelectConversation = useCallback(
+    (id: string) => {
+      switchConversation(id);
+    },
+    [switchConversation],
+  );
+
+  const handleDeleteConversation = useCallback(
+    async (id: string) => {
+      try {
+        await api.deleteConversation(id);
+      } catch {
+        // best-effort
+      }
+
+      if (currentConversationId === id) {
+        startNewChat();
+      }
+
+      setRefreshSignal((s) => s + 1);
+    },
+    [currentConversationId, startNewChat, setRefreshSignal],
+  );
+
+  const handleRenameConversation = useCallback(
+    async (id: string, title: string) => {
+      try { await api.renameConversation(id, title); } catch {}
+      setRefreshSignal((s) => s + 1);
+    },
+    [setRefreshSignal],
+  );
 
   const handleReconnect = useCallback(() => {
     disconnect();
@@ -91,7 +131,14 @@ export default function ChatPage() {
             onClick={() => setSidebarOpen(false)}
             aria-hidden="true"
           />
-          <Sidebar onNewChat={handleNewChat} />
+          <Sidebar
+            activeConversationId={currentConversationId}
+            refreshSignal={refreshSignal}
+            onNewChat={handleNewChat}
+            onSelectConversation={handleSelectConversation}
+            onDeleteConversation={handleDeleteConversation}
+            onRenameConversation={handleRenameConversation}
+          />
         </>
       )}
 

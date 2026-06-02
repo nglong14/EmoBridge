@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../contexts/AuthContext";
 import { api, type ChatMessage } from "../lib/api";
-import { connectChat, type WsIncoming } from "../lib/chat";
+import { connectChat } from "../lib/chat";
 
 export type ChatStatus = "connecting" | "open" | "closed" | "error";
 
@@ -15,12 +15,16 @@ export function useChat() {
   const [status, setStatus] = useState<ChatStatus>("closed");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [streamingIndex, setStreamingIndex] = useState<number | null>(null);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [refreshSignal, setRefreshSignal] = useState(0);
 
   const connRef = useRef<ReturnType<typeof connectChat> | null>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
   const streamingRef = useRef<string>("");
+  const conversationIdRef = useRef<string | null>(null);
 
   messagesRef.current = messages;
+  conversationIdRef.current = currentConversationId;
 
   const appendDelta = useCallback((delta: string) => {
     streamingRef.current += delta;
@@ -52,6 +56,10 @@ export function useChat() {
         onDone: () => {
           setStreamingIndex(null);
           streamingRef.current = "";
+        },
+        onConversation: (id) => {
+          setCurrentConversationId(id);
+          setRefreshSignal((s) => s + 1);
         },
         onError: (msg) => {
           setErrorMsg(msg);
@@ -90,6 +98,8 @@ export function useChat() {
 
   const send = useCallback(
     (content: string) => {
+      const conversationId = conversationIdRef.current;
+
       if (connRef.current?.getSocket()?.readyState !== WebSocket.OPEN) {
         setErrorMsg("Not connected. Please wait or click Reconnect.");
         return;
@@ -97,8 +107,6 @@ export function useChat() {
 
       setErrorMsg(null);
 
-      // When sending a new message, if the previous message was an error,
-      // clear the error state from previous messages
       const userMsg: ChatMessage = {
         id: crypto.randomUUID(),
         role: "user",
@@ -117,10 +125,29 @@ export function useChat() {
       setStreamingIndex((prev) => (prev !== null ? prev + 1 : messagesRef.current.length + 1));
       streamingRef.current = "";
 
-      connRef.current?.send({ type: "user_message", content });
+      connRef.current?.send({
+        type: "user_message",
+        content,
+        conversationId: conversationId ?? "",
+      });
     },
     [],
   );
+
+  const switchConversation = useCallback(async (id: string) => {
+    setCurrentConversationId(id);
+    try {
+      const { messages: history } = await api.getConversationMessages(id);
+      setMessages(history);
+    } catch {
+      setMessages([]);
+    }
+  }, []);
+
+  const startNewChat = useCallback(() => {
+    setCurrentConversationId(null);
+    setMessages([]);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -133,9 +160,14 @@ export function useChat() {
     status,
     errorMsg,
     streamingIndex,
+    currentConversationId,
+    refreshSignal,
     connect,
     disconnect,
     send,
     setMessages,
+    switchConversation,
+    startNewChat,
+    setRefreshSignal,
   };
 }

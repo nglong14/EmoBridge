@@ -29,6 +29,7 @@ type JwtPayload = {
 const wsMessageSchema = z.object({
   type: z.literal("user_message"),
   content: z.string().min(1),
+  conversationId: z.string(),
 });
 
 type WsIncoming = z.infer<typeof wsMessageSchema>;
@@ -36,6 +37,7 @@ type WsIncoming = z.infer<typeof wsMessageSchema>;
 type WsOutgoing =
   | { type: "token"; delta: string }
   | { type: "done" }
+  | { type: "conversation"; id: string }
   | { type: "error"; message: string };
 
 const HISTORY_LIMIT = 20;
@@ -151,12 +153,30 @@ export function attachWebsocket(server: HttpServer): Server {
       turnController = new AbortController();
       const signal = turnController.signal;
       const content = parsed.content;
+      let conversationId = parsed.conversationId;
 
       try {
-        // Insert user message into Message db
+        // Verify conversation ownership, auto-create if missing/unowned
+        {
+          const existing = await prisma.conversation.findUnique({
+            where: { id: conversationId },
+            select: { userId: true },
+          });
+
+          if (!existing || existing.userId !== userId) {
+            const created = await prisma.conversation.create({
+              data: { userId, title: "New chat" },
+              select: { id: true },
+            });
+            conversationId = created.id;
+            send(authed, { type: "conversation", id: conversationId });
+          }
+        }
+
+        // Insert user message with conversationId
         try {
           await prisma.message.create({
-            data: { userId, role: "USER", content },
+            data: { userId, conversationId, role: "USER", content },
           });
         } catch (err) {
           logger.error({ err, userId }, "Failed to persist user message");
@@ -164,18 +184,24 @@ export function attachWebsocket(server: HttpServer): Server {
           return;
         }
 
-        // Conversation history - 20 most recent messages
+        // Update conversation updatedAt
+        await prisma.conversation.update({
+          where: { id: conversationId },
+          data: { updatedAt: new Date() },
+        });
+
+        // Conversation history - 20 most recent messages (desc then reverse)
         let history: ChatMessage[];
 
         try {
           const rows = await prisma.message.findMany({
-            where: { userId },
-            orderBy: { createdAt: "asc" },
+            where: { conversationId },
+            orderBy: { createdAt: "desc" },
             take: HISTORY_LIMIT,
             select: { role: true, content: true },
           });
 
-          history = rows.map((row) => ({
+          history = rows.reverse().map((row) => ({
             role: row.role.toLowerCase() as ChatMessage["role"],
             content: row.content,
           }));
@@ -206,7 +232,7 @@ export function attachWebsocket(server: HttpServer): Server {
           if (full.length > 0) {
             try {
               await prisma.message.create({
-                data: { userId, role: "ASSISTANT", content: full },
+                data: { userId, conversationId, role: "ASSISTANT", content: full },
               });
             } catch (persistErr) {
               logger.error({ err: persistErr, userId }, "Failed to persist partial assistant message");
@@ -219,12 +245,30 @@ export function attachWebsocket(server: HttpServer): Server {
         if (full.length > 0) {
           try {
             await prisma.message.create({
-              data: { userId, role: "ASSISTANT", content: full },
+              data: { userId, conversationId, role: "ASSISTANT", content: full },
             });
           } catch (err) {
             logger.error({ err, userId }, "Failed to persist assistant message");
             send(authed, { type: "error", message: "Failed to save response" });
             return;
+          }
+
+          // Auto-title: if first turn (only 2 msgs: user + our new assistant), set title from user message
+          try {
+            const conversation = await prisma.conversation.findUnique({
+              where: { id: conversationId },
+              select: { title: true },
+            });
+
+            if (conversation?.title === "New chat") {
+              const title = content.length > 50 ? content.slice(0, 47) + "..." : content;
+              await prisma.conversation.update({
+                where: { id: conversationId },
+                data: { title },
+              });
+            }
+          } catch {
+            // title update is best-effort
           }
         }
 

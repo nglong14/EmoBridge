@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="frontend/public/logo.png" alt="EmoBridge Logo" width="200" />
+</div>
+
 # EmoBridge
 
 ## Table of Contents

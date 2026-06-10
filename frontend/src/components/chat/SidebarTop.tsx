@@ -9,7 +9,9 @@ export default function SidebarTop({ onNewChat }: Props) {
     <div className="chat-sidebar-top">
       <div className="chat-sidebar-brand">
         <Link className="chat-sidebar-home" to="/" aria-label="EmoBridge home">
-          <img className="chat-sidebar-logo" src="/logo.png" alt="EmoBridge logo" />
+          <span className="chat-sidebar-brand-mark">
+            <img className="chat-sidebar-logo-img" src="/logo.png" alt="EmoBridge logo" />
+          </span>
           <span className="chat-sidebar-logo-text">EmoBridge</span>
         </Link>
       </div>

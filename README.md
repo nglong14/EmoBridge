@@ -12,7 +12,7 @@
 ---
 
 ## Overview
-**EmoBridge** is a privacy-conscious emotional AI companion. It utilizes a microservices architecture composed of a modern React frontend, a Node.js Express API gateway, and a Python-based FastAPI service that runs local AI models through Ollama. 
+**EmoBridge** is a privacy-conscious emotional AI companion. It utilizes an architecture composed of a modern React frontend, a Node.js Express API gateway, and a Python-based FastAPI service that runs local AI models through Ollama. 
 
 ## Features
 - **User Authentication**: Secure JWT-based stateless authentication with password hashing (bcrypt).
